@@ -1,20 +1,21 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { ExpressAdapter } from '@nestjs/platform-express';
+import express from 'express'; // Change this line
 
-async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  app.setGlobalPrefix('api'); // Good practice for Vercel
-  await app.listen(process.env.PORT || 3000);
-}
+const server = express(); // This will now work without errors
 
-// This is the important part for Vercel
-export const handler = async (req: any, res: any) => {
-  const app = await NestFactory.create(AppModule);
-  await app.init();
-  const instance = app.getHttpAdapter().getInstance();
-  return instance(req, res);
+export const createServer = async (expressInstance) => {
+  const app = await NestFactory.create(
+    AppModule,
+    new ExpressAdapter(expressInstance),
+  );
+  app.enableCors();
+  await app.init(); // Ensure this is awaited
+  return app;
 };
 
-if (process.env.NODE_ENV !== 'production') {
-  bootstrap();
-}
+export default async (req, res) => {
+  await createServer(server);
+  server(req, res);
+};
